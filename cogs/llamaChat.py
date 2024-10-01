@@ -1,12 +1,11 @@
 import enum
+import os
+import dotenv
 
 import discord
-from discord import app_commands
-from discord.app_commands import Choice
 from discord.ext import commands
-
 import torch
-from transformers import pipeline
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 MODEL_ID = "meta-llama/Llama-3.2-1B-Instruct"
 
@@ -19,11 +18,14 @@ class LlamaChat(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         print("Fliter Cog Loaded")
         self.bot = bot
+        dotenv.load_dotenv()
+        cache_dir = os.getenv("CACHE_DIR")
+        model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16, device_map="auto", cache_dir=cache_dir)
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, cache_dir=cache_dir)
         self.pipe = pipeline(
             "text-generation",
-            model=MODEL_ID,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            model=model,
+            tokenizer=tokenizer
         )
         self.messages = []
         self.delete_wait = [5, 10, 3]
@@ -61,4 +63,4 @@ class LlamaChat(commands.Cog):
         return self.pipe(self.messages, max_new_tokens=256)
     
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Filter(bot))
+    await bot.add_cog(LlamaChat(bot))
