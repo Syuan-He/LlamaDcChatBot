@@ -1,13 +1,15 @@
 import enum
-import os
-import dotenv
+# import os
+# import dotenv
 
 import discord
 from discord.ext import commands
-import torch
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+# import torch
+# from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+import ollama
 
-MODEL_ID = "meta-llama/Llama-3.2-1B-Instruct"
+# MODEL_ID = "meta-llama/Llama-3.2-1B-Instruct"
+MODEL_ID = "llama3.2"
 
 class DeleteWait(enum.IntEnum):
     message = 0
@@ -18,15 +20,15 @@ class LlamaChat(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         print("Fliter Cog Loaded")
         self.bot = bot
-        dotenv.load_dotenv()
-        cache_dir = os.getenv("CACHE_DIR")
-        model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16, device_map="auto", cache_dir=cache_dir)
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, cache_dir=cache_dir)
-        self.pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer
-        )
+        # dotenv.load_dotenv()
+        # cache_dir = os.getenv("CACHE_DIR")
+        # model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16, device_map="auto", cache_dir=cache_dir)
+        # tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, cache_dir=cache_dir)
+        # self.pipe = pipeline(
+        #     "text-generation",
+        #     model=model,
+        #     tokenizer=tokenizer
+        # )
         self.messages = []
         self.delete_wait = [5, 10, 3]
 
@@ -55,12 +57,14 @@ class LlamaChat(commands.Cog):
         async with message.channel.typing():
             output = await self.__generate_answer__()
         await message.delete()
-        output_text = output[0]["generated_text"][-1]
+        # output_text = output[0]["generated_text"][-1]
+        output_text = output['message']
         await message.channel.send(output_text["content"], delete_after=self.delete_wait[DeleteWait.message])
         self.messages.append(output_text)
     
     async def __generate_answer__(self):
-        return self.pipe(self.messages, max_new_tokens=256)
+        # return self.pipe(self.messages, max_new_tokens=256)
+        return ollama.chat(model=MODEL_ID, messages=self.messages)
     
 async def setup(bot: commands.Bot):
     await bot.add_cog(LlamaChat(bot))
